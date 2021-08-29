@@ -1,0 +1,14 @@
+[home_device]
+device=/dev/mapper/sailfish-home
+mapper=home_encrypted
+mount=/home
+name=Home
+type=device
+
+[home_in_file]
+device=./encrypted.img
+mapper=home_encrypted_file
+mount=/mnt
+name=Home
+size_mb=1240
+type=file
