@@ -26,7 +26,7 @@ file(GLOB CXX_SRC src/*.cpp)
 file(GLOB CXX_HEADERS src/*.h)
 
 add_custom_target(Sources SOURCES
-    ${CXX_SRC} ${CXX_HEADERS} test/test.cpp
+    ${CXX_SRC} ${CXX_HEADERS} src/test/test.cpp
     rpm/libsfosdevenc.spec
     )
 
@@ -49,7 +49,7 @@ set_target_properties(sfosdevenc
     SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 
-add_executable(test test/test.cpp)
+add_executable(test src/test/test.cpp)
 target_link_libraries(test
     sfosdevenc
     Qt5::Core
