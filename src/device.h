@@ -10,26 +10,37 @@ namespace DevEnc {
   class Device : public QObject
   {
     Q_OBJECT
+
+    Q_PROPERTY(bool deviceAvailable READ deviceAvailable)
+    Q_PROPERTY(bool encrypted READ encrypted NOTIFY encryptedChanged)
+    Q_PROPERTY(bool initialized READ initialized NOTIFY initializedChanged)
+    Q_PROPERTY(QString id READ id)
+    Q_PROPERTY(QString name READ name)
+
   public:
     explicit Device(QSettings &settings, QObject *parent = nullptr);
 
-    QString getRecoveryPassword() const;
+    Q_INVOKABLE QString getRecoveryPassword() const;
     bool removeRecoveryPasswordCopy();
 
-    bool isDeviceAvailable() const;
-    bool isEncrypted() const;
-    bool isInitialized() const { return m_state != StateReset; }
+    bool deviceAvailable() const;
+    bool encrypted() const;
+    QString id() const { return m_id; }
+    bool initialized() const { return m_state != StateReset; }
+    QString name() const { return m_name; }
 
     // set device either to be encrypted or not
-    bool setEncryption(bool encrypt);
+    Q_INVOKABLE bool setEncryption(bool encrypt);
 
     // password
-    bool addPasswordPlain(QByteArray password, QByteArray new_password);
+    Q_INVOKABLE bool addPasswordPlain(QByteArray password, QByteArray new_password);
 
     bool wantEncrypted() const { return m_state == StateEncrypted; }
     bool wantPlain() const { return m_state == StatePlain; }
 
   signals:
+    void encryptedChanged();
+    void initializedChanged();
 
   private:
     bool createFile();

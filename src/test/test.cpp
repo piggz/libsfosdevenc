@@ -8,9 +8,9 @@ int main()
   DevEnc::DeviceList devlist;
   cout << "Init needed: " << devlist.initNeeded() << "\n";
   DevEnc::Device *device = devlist.device("home_in_file");
-  cout << device->isInitialized() << "\n";
-  cout << "Available: " << device->isDeviceAvailable() << "\n";
-  cout << "Encrypted: " << device->isEncrypted() << "\n";
+  cout << device->initialized() << "\n";
+  cout << "Available: " << device->deviceAvailable() << "\n";
+  cout << "Encrypted: " << device->encrypted() << "\n";
 
   bool ret = device->setEncryption(true);
   cout << "setEncrypted: " << ret << "\n";

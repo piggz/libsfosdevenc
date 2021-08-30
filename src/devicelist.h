@@ -16,14 +16,23 @@ namespace DevEnc {
   public:
     explicit DeviceList(QObject *parent = nullptr);
 
-    bool initNeeded() const;
-    QStringList devices() const { return m_devices.keys(); }
-    Device* device(const QString name);
+    Q_INVOKABLE bool initNeeded() const;
+    Q_INVOKABLE QStringList devices() const;
+    Q_INVOKABLE Device* device(const QString name);
+    Q_INVOKABLE Device* nextDevice();
+
 
   signals:
 
+  public: // static
+    static DeviceList* instance();
+
   private:
-    QMap< QString, QSharedPointer<Device> > m_devices;
+    QList< QSharedPointer<Device> > m_devices;
+    int m_current_device{-1};
+
+  private:
+    static DeviceList *s_instance;
 
   };
 

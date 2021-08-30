@@ -74,7 +74,7 @@ Device::Device(QSettings &settings, QObject *parent) : QObject(parent)
     throw std::runtime_error(m_id.toStdString() + ": Unknown state of the device");
 }
 
-bool Device::isDeviceAvailable() const
+bool Device::deviceAvailable() const
 {
   QFileInfo fi(m_device);
 
@@ -90,9 +90,9 @@ bool Device::isDeviceAvailable() const
   return fi.dir().exists();
 }
 
-bool Device::isEncrypted() const
+bool Device::encrypted() const
 {
-  OPCHECK(isDeviceAvailable(), "Device is not available");
+  OPCHECK(deviceAvailable(), "Device is not available");
 
   struct crypt_device *cd;
 
@@ -108,8 +108,8 @@ bool Device::isEncrypted() const
 
 bool Device::setEncryption(bool enc)
 {
-  OPCHECK(!isInitialized(), "Settings encryption can be called on noninitialized device only");
-  OPCHECK(isDeviceAvailable(), "Device is not available");
+  OPCHECK(!initialized(), "Settings encryption can be called on noninitialized device only");
+  OPCHECK(deviceAvailable(), "Device is not available");
 
   // preparation for files
   if (m_type == TypeFile)
@@ -136,6 +136,9 @@ bool Device::setEncryption(bool enc)
   settings.beginGroup(m_id);
   settings.setValue("state", enc ? "encrypted" : "plain");
   m_state = (enc ? StateEncrypted : StatePlain);
+
+  emit encryptedChanged();
+  emit initializedChanged();
 
   return true;
 }
