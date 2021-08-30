@@ -1,6 +1,7 @@
 #ifndef DEVENC_DEVICE_H
 #define DEVENC_DEVICE_H
 
+#include <QByteArray>
 #include <QObject>
 #include <QSettings>
 
@@ -21,7 +22,9 @@ namespace DevEnc {
 
     // set device either to be encrypted or not
     bool setEncryption(bool encrypt);
-    bool setPasswordPlain(QString password);
+
+    // password
+    bool addPasswordPlain(QByteArray password, QByteArray new_password);
 
     bool wantEncrypted() const { return m_state == StateEncrypted; }
     bool wantPlain() const { return m_state == StatePlain; }
@@ -36,6 +39,7 @@ namespace DevEnc {
     bool writeRecoveryPasswordCopy();
 
     bool encryptAndFormat();
+    bool format();
 
     bool createSystemDConfig(bool enc);
 

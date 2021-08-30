@@ -12,11 +12,12 @@ int main()
   cout << "Available: " << device->isDeviceAvailable() << "\n";
   cout << "Encrypted: " << device->isEncrypted() << "\n";
 
-//  bool ret = device->setEncryption(true);
-//  cout << "Encrypted: " << ret << "\n";
+  bool ret = device->setEncryption(true);
+  cout << "setEncrypted: " << ret << "\n";
+  device->addPasswordPlain(QByteArray(), "foo");
 
-  cout << device->getRecoveryPassword().toStdString() << "\n";
-  cout << device->removeRecoveryPasswordCopy() << "\n";
+//  cout << device->getRecoveryPassword().toStdString() << "\n";
+//  cout << device->removeRecoveryPasswordCopy() << "\n";
 
   return 0;
 }

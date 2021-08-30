@@ -5,22 +5,24 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QProcess>
-#include <QRandomGenerator>
 #include <QTemporaryDir>
 
 #include <exception>
 #include <fstream>
-#include <libcryptsetup.h>
 #include <iostream>
+#include <libcryptsetup.h>
+#include <random>
+
 
 using namespace DevEnc;
 
+// helper macros
 #define OPCHECK(op, msg) if (!(op)) { \
-  std::cerr << "DevEnc::Device:" << __LINE__ << ": " << msg << ". Device: " << m_device.toStdString() << "\n"; \
+  std::cerr << "DevEnc::Dev:" << __LINE__ << ": " << msg << ". Device: " << m_device.toStdString() << "\n"; \
   return false; }
 #define OPCHECK_CRYPT(op, msg) if (!(op)) { \
   crypt_free(cd); \
-  std::cerr << "DevEnc::Device:" << __LINE__ << ": " << msg << ". Device: " << m_device.toStdString() << "\n"; \
+  std::cerr << "DevEnc::Dev:" << __LINE__ << ": " << msg << ". Device: " << m_device.toStdString() << "\n"; \
   return false; }
 
 Device::Device(QSettings &settings, QObject *parent) : QObject(parent)
@@ -35,6 +37,26 @@ Device::Device(QSettings &settings, QObject *parent) : QObject(parent)
   m_mapper = settings.value("mapper").toString();
   m_mount = settings.value("mount").toString();
 
+  // check settings
+  if (m_device.isEmpty())
+    throw std::runtime_error(m_id.toStdString() + ": Missing device");
+
+  if (!QDir::isAbsolutePath(m_device))
+    throw std::runtime_error(m_id.toStdString() + ": Device should be given by absolute path");
+
+  if (m_mapper.isEmpty())
+    throw std::runtime_error(m_id.toStdString() + ": Missing device mapper name");
+
+  if (m_mapper.contains('/') || m_mapper.contains('-'))
+    throw std::runtime_error(m_id.toStdString() + ": Mapper name should not contain / or -");
+
+  if (m_mount.isEmpty())
+    throw std::runtime_error(m_id.toStdString() + ": Missing mount point");
+
+  if (!QDir::isAbsolutePath(m_mount))
+    throw std::runtime_error(m_id.toStdString() + ": Mount point should be absolute path");
+
+  // load and check remaining settings
   QString t = settings.value("type").toString();
   if (t == "device") m_type = TypeDevice;
   else if (t == "file") m_type = TypeFile;
@@ -44,10 +66,10 @@ Device::Device(QSettings &settings, QObject *parent) : QObject(parent)
   if (m_size_mb <= 0 && m_type == TypeFile)
     throw std::runtime_error(m_id.toStdString() + ": Missing size of allocated file");
 
-  QString s = settings.value("state", "Reset").toString();
-  if (s == "Reset") m_state = StateReset;
-  else if (s == "Encrypted") m_state = StateEncrypted;
-  else if (s == "Plain") m_state = StatePlain;
+  QString s = settings.value("state", "reset").toString();
+  if (s == "reset") m_state = StateReset;
+  else if (s == "encrypted") m_state = StateEncrypted;
+  else if (s == "plain") m_state = StatePlain;
   else
     throw std::runtime_error(m_id.toStdString() + ": Unknown state of the device");
 }
@@ -101,6 +123,10 @@ bool Device::setEncryption(bool enc)
     {
       OPCHECK(encryptAndFormat(), "Failed to encrypt and format device");
     }
+  else if (m_type == TypeDevice)
+    {
+      OPCHECK(format(), "Failed to reformat device as a part of a reset");
+    }
 
   // update systemd configuration
   OPCHECK(createSystemDConfig(enc), "Failed to setup SystemD configuration");
@@ -108,7 +134,7 @@ bool Device::setEncryption(bool enc)
   // record changes in configuration
   QSettings settings(CONFIG_DIR "/devices.ini", QSettings::IniFormat);
   settings.beginGroup(m_id);
-  settings.setValue("state", enc ? "Encrypted" : "Plain");
+  settings.setValue("state", enc ? "encrypted" : "plain");
   m_state = (enc ? StateEncrypted : StatePlain);
 
   return true;
@@ -161,7 +187,7 @@ bool Device::encryptAndFormat()
 
   createRecoveryPassword();
   OPCHECK_CRYPT(crypt_keyslot_add_by_volume_key(cd, /* crypt context */
-                                                CRYPT_ANY_SLOT,     /* just use first free slot */
+                                                CRYPT_ANY_SLOT,
                                                 NULL,               /* use internal volume key */
                                                 0,                  /* unused (size of volume key) */
                                                 m_recovery_password.toLocal8Bit().data(),
@@ -193,6 +219,13 @@ bool Device::encryptAndFormat()
   return true;
 }
 
+bool Device::format()
+{
+  OPCHECK(QProcess::execute("mkfs.ext4",
+                            QStringList() << m_device) == 0,
+          "Failed to format filesystem");
+  return true;
+}
 
 // recovery password
 void Device::createRecoveryPassword()
@@ -200,17 +233,17 @@ void Device::createRecoveryPassword()
   const QString chars("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
   const int nc = chars.length();
 
+  std::random_device rd("/dev/urandom");
+  std::uniform_int_distribution<int> dist(0, nc-1);
+
   m_recovery_password = QString();
   for (int slot=0; slot < 8; ++slot)
     {
       if (!m_recovery_password.isEmpty())
         m_recovery_password += "-";
       for (int i=0; i < 5; ++i)
-        m_recovery_password += chars[QRandomGenerator::global()->bounded(nc)];
+        m_recovery_password += chars[dist(rd)];
     }
-
-  // TODO: DELETE THIS!!!!
-  qDebug() << "Recovery: " << m_recovery_password;
 }
 
 bool Device::writeRecoveryPasswordCopy()
@@ -292,5 +325,95 @@ bool Device::deleteFile()
 // SystemD units
 bool Device::createSystemDConfig(bool enc)
 {
+  QDir etc("/etc/systemd/system");
+
+  QString mount = m_mount.mid(1);
+
+  // cleanup and remove possibly present units
+  etc.remove(mount + ".mount");
+  etc.remove("late-mount.target.requires/" + mount + ".mount");
+
+  etc.remove("decrypt-" + m_mapper + "service");
+  etc.remove("late-mount.target.requires/decrypt-" + m_mapper + ".service");
+
+  etc.remove("dev-mapper-" + m_mapper + ".device");
+
+  // new units
+
+  if (!enc && m_type == TypeFile)
+    return true; // nothing to mount in this case
+
+  OPCHECK(etc.mkpath("late-mount.target.requires"),
+          "Failed to create missing systemd directory");
+
+  // required in all remaining cases
+  std::ofstream fmount(etc.absoluteFilePath(mount + ".mount").toLocal8Bit().data());
+
+  if (!enc && m_type == TypeDevice)
+    {
+      fmount << "[Unit]\n"
+             << "Description=" << m_name.toStdString() << "\n"
+             << "Before=late-mount.target\n\n"
+             << "[Mount]\n"
+             << "What=" << m_device.toStdString() << "\n"
+             << "Where=" << m_mount.toStdString() << "\n"
+             << "Type=ext4\n"
+             << "Options=defaults,noatime\n\n"
+             << "[Install]\n"
+             << "RequiredBy=late-mount.target\n";
+      OPCHECK(fmount, "Failed to write mount unit");
+
+      OPCHECK(QFile::link("../" + mount + ".mount",
+                          etc.absoluteFilePath("late-mount.target.requires/" + mount + ".mount")),
+              "Failed to enable SystemD mount unit");
+
+      return true;
+    }
+
+  OPCHECK(enc, "Internal error, should never happen");
+
+  // mount unit for encrypted case
+  fmount << "[Unit]\n"
+         << "Description=" << m_name.toStdString() << "\n"
+         << "After=decrypt-" << m_mapper.toStdString() << ".service\n"
+         << "Before=late-mount.target\n\n"
+         << "[Mount]\n"
+         << "What=/dev/mapper/" << m_mapper.toStdString() << "\n"
+         << "Where=" << m_mount.toStdString() << "\n"
+         << "Type=ext4\n"
+         << "Options=defaults,noatime\n\n"
+         << "[Install]\n"
+         << "RequiredBy=late-mount.target\n";
+  OPCHECK(fmount, "Failed to write mount unit");
+
+  OPCHECK(QFile::link("../" + mount + ".mount",
+                      etc.absoluteFilePath("late-mount.target.requires/" + mount + ".mount")),
+          "Failed to enable SystemD mount unit");
+
+  // device unit
+  std::ofstream fdevice(etc.absoluteFilePath("dev-mapper-" + m_mapper + ".device").toLocal8Bit().data());
+  fdevice << "[Unit]\n"
+          << "Description=Device " << m_mapper.toStdString() << "\n"
+          << "JobTimeoutSec=0\n";
+  OPCHECK(fdevice, "Failed to write device unit");
+
+  // decryption service unit
+  std::ofstream fservice(etc.absoluteFilePath("decrypt-" + m_mapper + ".service").toLocal8Bit().data());
+  fservice << "[Unit]\n"
+           << "Description=Decrypt " << m_mapper.toStdString() << "\n"
+           << "Before=late-mount.target\n\n"
+           << "[Service]\n"
+           << "Type=oneshot\n"
+           << "RemainAfterExit=yes\n"
+           << "ExecStart=" << DECRYPT_CMD << " " << m_device.toStdString() << " " << m_mapper.toStdString() << "\n"
+           << "Restart=no\n\n"
+           << "[Install]\n"
+           << "RequiredBy=late-mount.target\n";
+  OPCHECK(fservice, "Failed to write decryption service unit");
+
+  OPCHECK(QFile::link("../decrypt-" + m_mapper + ".service",
+                      etc.absoluteFilePath("late-mount.target.requires/decrypt-" + m_mapper + ".service")),
+          "Failed to enable SystemD decryption service unit");
+
   return true;
 }
