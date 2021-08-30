@@ -25,6 +25,11 @@ using namespace DevEnc;
   std::cerr << "DevEnc::Dev:" << __LINE__ << ": " << msg << ". Device: " << m_device.toStdString() << "\n"; \
   return false; }
 
+Device::Device(QObject *parent) : QObject(parent)
+{
+  // required by QML
+}
+
 Device::Device(QSettings &settings, QObject *parent) : QObject(parent)
 {
   m_id = settings.group();

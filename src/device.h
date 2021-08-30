@@ -18,7 +18,8 @@ namespace DevEnc {
     Q_PROPERTY(QString name READ name)
 
   public:
-    explicit Device(QSettings &settings, QObject *parent = nullptr);
+    Device(QObject *parent = nullptr);
+    Device(QSettings &settings, QObject *parent = nullptr);
 
     Q_INVOKABLE QString getRecoveryPassword() const;
     bool removeRecoveryPasswordCopy();
