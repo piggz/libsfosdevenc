@@ -14,6 +14,13 @@ BuildRequires:  cmake
 %description
 %summary
 
+%package devel
+Summary: Development library for %{name}
+Requires: %{name} = %{version}
+
+%description devel
+This package contains the development library for %{name}.
+
 %prep
 %setup -q -n %{name}-%{version}
 
@@ -26,7 +33,15 @@ make %{?_smp_mflags}
 rm -rf %{buildroot}
 %make_install
 
+%post -p /sbin/ldconfig
+
+%postun -p /sbin/ldconfig
+
 %files
 %defattr(-,root,root,-)
-%{_libdir}
-%{_includedir}
+%{_libdir}/%{name}.so.*
+
+%files devel
+%defattr(-,root,root,-)
+%{_libdir}/%{name}.so
+%{_includedir}/devenc

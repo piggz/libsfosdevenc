@@ -1,5 +1,10 @@
-project(libsfosdevenc CXX)
 cmake_minimum_required(VERSION 3.5)
+
+project(libsfosdevenc
+    LANGUAGES CXX
+    VERSION 0.1
+    DESCRIPTION "Library used by Sailfish OS Device Encryption"
+)
 
 find_package (Qt5 COMPONENTS Core REQUIRED)
 
@@ -37,6 +42,11 @@ add_library(sfosdevenc SHARED ${CXX_SRC} ${CXX_HEADERS})
 target_link_libraries(sfosdevenc
      Qt5::Core
      ${CRYPTSETUP_LIBRARIES}
+)
+
+set_target_properties(sfosdevenc
+    PROPERTIES VERSION ${CMAKE_PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 
 add_executable(test test/test.cpp)
