@@ -33,6 +33,9 @@ namespace DevEnc {
     // set device either to be encrypted or not
     Q_INVOKABLE bool setEncryption(bool encrypt);
 
+    // call when considered that device is ready for use
+    Q_INVOKABLE bool setInitialized();
+
     // password
     Q_INVOKABLE bool addPasswordPlain(QByteArray password, QByteArray new_password);
 
@@ -79,6 +82,8 @@ namespace DevEnc {
 
     // internal variables
     QString m_recovery_password;
+    bool m_set_encryption_success{false};
+    bool m_set_encryption_encrypted{false};
   };
 
 } // namespace DevEnc
