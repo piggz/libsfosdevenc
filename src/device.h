@@ -11,11 +11,11 @@ namespace DevEnc {
   {
     Q_OBJECT
 
-    Q_PROPERTY(bool deviceAvailable READ deviceAvailable)
+    Q_PROPERTY(bool deviceAvailable READ deviceAvailable NOTIFY deviceAvailableChanged)
     Q_PROPERTY(bool encrypted READ encrypted NOTIFY encryptedChanged)
     Q_PROPERTY(bool initialized READ initialized NOTIFY initializedChanged)
-    Q_PROPERTY(QString id READ id)
-    Q_PROPERTY(QString name READ name)
+    Q_PROPERTY(QString id READ id NOTIFY idChanged)
+    Q_PROPERTY(QString name READ name NOTIFY nameChanged)
 
   public:
     Device(QObject *parent = nullptr);
@@ -43,8 +43,11 @@ namespace DevEnc {
     bool wantPlain() const { return m_state == StatePlain; }
 
   signals:
+    void deviceAvailableChanged();
     void encryptedChanged();
     void initializedChanged();
+    void idChanged();
+    void nameChanged();
 
   private:
     bool createFile();

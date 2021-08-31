@@ -135,9 +135,6 @@ bool Device::setEncryption(bool enc)
       OPCHECK(format(), "Failed to reformat device as a part of a reset");
     }
 
-  // update systemd configuration
-  OPCHECK(createSystemDConfig(enc), "Failed to setup SystemD configuration");
-
   m_set_encryption_success = true;
   m_set_encryption_encrypted = enc;
   emit encryptedChanged();
@@ -148,6 +145,9 @@ bool Device::setEncryption(bool enc)
 bool Device::setInitialized()
 {
   OPCHECK(m_set_encryption_success, "Cannot set device to initialized before successful setEncrypt");
+
+  // update systemd configuration
+  OPCHECK(createSystemDConfig(enc), "Failed to setup SystemD configuration");
 
   // record changes in configuration
   QSettings settings(CONFIG_DIR "/devices.ini", QSettings::IniFormat);
