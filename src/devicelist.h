@@ -13,9 +13,10 @@ namespace DevEnc {
   class DeviceList : public QObject
   {
     Q_OBJECT
-  public:
+  private:
     explicit DeviceList(QObject *parent = nullptr);
 
+  public:
     Q_INVOKABLE bool initNeeded() const;
     Q_INVOKABLE QStringList devices() const;
     Q_INVOKABLE DevEnc::Device* device(const QString name);
