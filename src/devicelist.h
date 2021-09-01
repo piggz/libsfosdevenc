@@ -19,8 +19,9 @@ namespace DevEnc {
     Q_INVOKABLE bool initNeeded() const;
     Q_INVOKABLE QStringList devices() const;
     Q_INVOKABLE DevEnc::Device* device(const QString name);
-    Q_INVOKABLE DevEnc::Device* nextDevice();
 
+    Q_INVOKABLE DevEnc::Device* nextDevice();
+    Q_INVOKABLE void resetNextDevice() { m_current_device = -1; }
 
   signals:
 

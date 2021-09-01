@@ -147,7 +147,7 @@ bool Device::setInitialized()
   OPCHECK(m_set_encryption_success, "Cannot set device to initialized before successful setEncrypt");
 
   // update systemd configuration
-  OPCHECK(createSystemDConfig(enc), "Failed to setup SystemD configuration");
+  OPCHECK(createSystemDConfig(m_set_encryption_encrypted), "Failed to setup SystemD configuration");
 
   // record changes in configuration
   QSettings settings(CONFIG_DIR "/devices.ini", QSettings::IniFormat);
