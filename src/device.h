@@ -5,6 +5,8 @@
 #include <QObject>
 #include <QSettings>
 
+#include "password.h"
+
 namespace DevEnc {
 
   class Device : public QObject
@@ -37,7 +39,7 @@ namespace DevEnc {
     Q_INVOKABLE bool setInitialized();
 
     // password
-    Q_INVOKABLE bool addPasswordPlain(QByteArray password, QByteArray new_password);
+    Q_INVOKABLE bool addPassword(Password *password, Password *new_password);
 
     bool wantEncrypted() const { return m_state == StateEncrypted; }
     bool wantPlain() const { return m_state == StatePlain; }

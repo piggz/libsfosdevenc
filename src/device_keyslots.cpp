@@ -14,8 +14,11 @@ using namespace DevEnc;
   std::cerr << "DevEnc::DevKey:" << __LINE__ << ": " << msg << ". Device: " << m_device.toStdString() << "\n"; \
   return false; }
 
-bool Device::addPasswordPlain(QByteArray password, QByteArray new_password)
+bool Device::addPassword(Password *passwordObj, Password *new_passwordObj)
 {
+  QByteArray password; if (passwordObj) password = passwordObj->get();
+  QByteArray new_password; if (new_passwordObj) new_password = new_passwordObj->get();
+
   OPCHECK(m_state == StateEncrypted, "Cannot add password to non-encrypted device");
   OPCHECK(!new_password.isEmpty(), "Cannot add empty password");
   if (password.isEmpty()) password = m_recovery_password.toLocal8Bit();
