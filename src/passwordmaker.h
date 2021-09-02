@@ -19,7 +19,7 @@ namespace DevEnc {
     Q_INVOKABLE QString description(QString type) const;
     Q_INVOKABLE QString descriptionLong(QString type) const;
 
-    Password* make(QString type);
+    Q_INVOKABLE DevEnc::Password* newPassword(QString type);
 
   public: // static
     static PasswordMaker* instance();

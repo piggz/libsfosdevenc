@@ -33,7 +33,7 @@ QString PasswordMaker::descriptionLong(QString type) const
   return "";
 }
 
-Password* PasswordMaker::make(QString type)
+Password* PasswordMaker::newPassword(QString type)
 {
   if (type == PasswordPlain::type()) return new PasswordPlain();
   return nullptr;
