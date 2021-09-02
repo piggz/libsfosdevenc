@@ -39,6 +39,7 @@ namespace DevEnc {
     Q_INVOKABLE bool setInitialized();
 
     // password
+    Q_INVOKABLE bool addPassword(Password *new_password) { return addPassword(nullptr, new_password); }
     Q_INVOKABLE bool addPassword(Password *password, Password *new_password);
 
     bool wantEncrypted() const { return m_state == StateEncrypted; }
