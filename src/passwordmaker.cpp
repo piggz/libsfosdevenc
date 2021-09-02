@@ -1,5 +1,7 @@
 #include "passwordmaker.h"
 
+#include "passwordplain.h"
+
 using namespace DevEnc;
 
 PasswordMaker* PasswordMaker::s_instance = nullptr;
@@ -16,16 +18,23 @@ PasswordMaker* PasswordMaker::instance()
 
 QStringList PasswordMaker::types() const
 {
-  return { "plain" };
+  return { PasswordPlain::type() };
 }
 
 QString PasswordMaker::description(QString type) const
 {
-  if (type == "plain") return "";
+  if (type == PasswordPlain::type()) return PasswordPlain::description();
+  return "";
+}
+
+QString PasswordMaker::descriptionLong(QString type) const
+{
+  if (type == PasswordPlain::type()) return PasswordPlain::descriptionLong();
   return "";
 }
 
 Password* PasswordMaker::make(QString type)
 {
+  if (type == PasswordPlain::type()) return new PasswordPlain();
   return nullptr;
 }

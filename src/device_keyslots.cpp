@@ -21,12 +21,12 @@ bool Device::addPassword(Password *passwordObj, Password *new_passwordObj)
 
   OPCHECK(m_state == StateEncrypted, "Cannot add password to non-encrypted device");
   OPCHECK(!new_password.isEmpty(), "Cannot add empty password");
-  if (password.isEmpty()) password = m_recovery_password.toLocal8Bit();
+  if (password.isEmpty()) password = m_recovery_password.toLatin1();
   OPCHECK(!password.isEmpty(), "Cannot add new password without providing another one");
 
   struct crypt_device *cd;
 
-  OPCHECK(crypt_init(&cd, m_device.toLocal8Bit().data()) == 0, "crypt_init() failed");
+  OPCHECK(crypt_init(&cd, m_device.toLatin1().data()) == 0, "crypt_init() failed");
   OPCHECK(crypt_load(cd, CRYPT_LUKS, NULL) == 0, "Failed to load LUKS header");
 
   OPCHECK_CRYPT(crypt_keyslot_add_by_passphrase(cd,

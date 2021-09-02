@@ -101,7 +101,7 @@ bool Device::encrypted() const
 
   struct crypt_device *cd;
 
-  OPCHECK(crypt_init(&cd, m_device.toLocal8Bit().data()) == 0, "crypt_init() failed");
+  OPCHECK(crypt_init(&cd, m_device.toLatin1().data()) == 0, "crypt_init() failed");
   OPCHECK_CRYPT(crypt_load(cd, CRYPT_LUKS, NULL) == 0, "crypt_load() failed on device");
 
   qDebug() << crypt_get_type(cd) << crypt_get_cipher(cd) << crypt_get_cipher_mode(cd) << crypt_get_iv_offset(cd) << crypt_get_volume_key_size(cd);
@@ -169,7 +169,7 @@ QString Device::getRecoveryPassword() const
   // requested by user for backing it up
   QDir dir(m_mount);
 
-  std::ifstream fin( dir.absoluteFilePath(RECOVERY_PASSWORD_FILE).toLocal8Bit().data() );
+  std::ifstream fin( dir.absoluteFilePath(RECOVERY_PASSWORD_FILE).toLatin1().data() );
   if (!fin) return QString();
   std::string pwd;
   fin >> pwd;
@@ -192,7 +192,7 @@ bool Device::encryptAndFormat()
   // initialize encryption
   struct crypt_device *cd;
 
-  OPCHECK(crypt_init(&cd, m_device.toLocal8Bit().data()) == 0, "crypt_init() failed");
+  OPCHECK(crypt_init(&cd, m_device.toLatin1().data()) == 0, "crypt_init() failed");
 
   OPCHECK_CRYPT(crypt_format(cd,            /* crypt context */
                              CRYPT_LUKS2,   /* LUKS2 is a new LUKS format; use CRYPT_LUKS1 for LUKS1 */
@@ -209,15 +209,15 @@ bool Device::encryptAndFormat()
                                                 CRYPT_ANY_SLOT,
                                                 NULL,               /* use internal volume key */
                                                 0,                  /* unused (size of volume key) */
-                                                m_recovery_password.toLocal8Bit().data(),
+                                                m_recovery_password.toLatin1().data(),
                                                 m_recovery_password.length()) >= 0,
                 "Failed to add recovery password");
 
   // open encrypted volume
   OPCHECK_CRYPT(crypt_activate_by_passphrase(cd,
-                                             m_mapper.toLocal8Bit().data(),
+                                             m_mapper.toLatin1().data(),
                                              CRYPT_ANY_SLOT,
-                                             m_recovery_password.toLocal8Bit().data(),
+                                             m_recovery_password.toLatin1().data(),
                                              m_recovery_password.length(),
                                              0) >= 0,
                 "Failed to activate device");
@@ -231,7 +231,7 @@ bool Device::encryptAndFormat()
   OPCHECK_CRYPT(writeRecoveryPasswordCopy(), "Failed to store recovery password");
 
   // close encrypted volume
-  OPCHECK_CRYPT(crypt_deactivate(cd, m_mapper.toLocal8Bit().data()) == 0,
+  OPCHECK_CRYPT(crypt_deactivate(cd, m_mapper.toLatin1().data()) == 0,
                 "Failed to deactivate device");
 
   crypt_free(cd);
@@ -273,7 +273,7 @@ bool Device::writeRecoveryPasswordCopy()
   OPCHECK(QProcess::execute("mount",
                             QStringList()
                             << "/dev/mapper/" + m_mapper
-                            << tmpDir.path().toLocal8Bit().data()
+                            << tmpDir.path().toLatin1().data()
                             ) == 0,
           "Failed to mount filesystem for temporary access");
 
@@ -284,7 +284,7 @@ bool Device::writeRecoveryPasswordCopy()
   OPCHECK(dir.mkpath(dpath), "Failed to make folder for storing recovery password");
 
   QString abspath = dir.absoluteFilePath(fi.filePath());
-  std::ofstream fout(abspath.toLocal8Bit().data());
+  std::ofstream fout(abspath.toLatin1().data());
   OPCHECK(fout, "Failed to open file for writing recovery password");
   fout << m_recovery_password.toStdString() << "\n";
   OPCHECK(fout, "Failed to write recovery password");
@@ -318,7 +318,7 @@ bool Device::createFile()
       OPCHECK(dir.remove(fi.absoluteFilePath()), "Failed to remove file");
     }
 
-  std::ofstream fout(fi.absoluteFilePath().toLocal8Bit().data(), std::ios::binary | std::ios::out);
+  std::ofstream fout(fi.absoluteFilePath().toLatin1().data(), std::ios::binary | std::ios::out);
   OPCHECK(fout,"Failed to open file");
   fout.seekp( ((uint64_t)m_size_mb) * 1024*1024 );
   OPCHECK(fout,"Failed to seek in file initialization");
@@ -366,7 +366,7 @@ bool Device::createSystemDConfig(bool enc)
           "Failed to create missing systemd directory");
 
   // required in all remaining cases
-  std::ofstream fmount(etc.absoluteFilePath(mount + ".mount").toLocal8Bit().data());
+  std::ofstream fmount(etc.absoluteFilePath(mount + ".mount").toLatin1().data());
 
   if (!enc && m_type == TypeDevice)
     {
@@ -410,14 +410,14 @@ bool Device::createSystemDConfig(bool enc)
           "Failed to enable SystemD mount unit");
 
   // device unit
-  std::ofstream fdevice(etc.absoluteFilePath("dev-mapper-" + m_mapper + ".device").toLocal8Bit().data());
+  std::ofstream fdevice(etc.absoluteFilePath("dev-mapper-" + m_mapper + ".device").toLatin1().data());
   fdevice << "[Unit]\n"
           << "Description=Device " << m_mapper.toStdString() << "\n"
           << "JobTimeoutSec=0\n";
   OPCHECK(fdevice, "Failed to write device unit");
 
   // decryption service unit
-  std::ofstream fservice(etc.absoluteFilePath("decrypt-" + m_mapper + ".service").toLocal8Bit().data());
+  std::ofstream fservice(etc.absoluteFilePath("decrypt-" + m_mapper + ".service").toLatin1().data());
   fservice << "[Unit]\n"
            << "Description=Decrypt " << m_mapper.toStdString() << "\n"
            << "Before=late-mount.target\n\n"

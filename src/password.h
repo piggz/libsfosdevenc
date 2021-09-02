@@ -20,8 +20,6 @@ namespace DevEnc {
 
     // override in implementations
     virtual QByteArray get() { return QByteArray(); }
-    Q_INVOKABLE virtual QString type() { return QString(); }
-    Q_INVOKABLE virtual QString description() { return QString(); }
 
   signals:
     void passwordChanged();

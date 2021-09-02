@@ -17,6 +17,7 @@ namespace DevEnc {
   public:
     Q_INVOKABLE QStringList types() const;
     Q_INVOKABLE QString description(QString type) const;
+    Q_INVOKABLE QString descriptionLong(QString type) const;
 
     Password* make(QString type);
 
