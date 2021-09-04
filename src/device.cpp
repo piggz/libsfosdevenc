@@ -227,7 +227,7 @@ bool Device::encryptAndFormat()
 
   // format
   OPCHECK_CRYPT(QProcess::execute("mkfs.ext4",
-                                  QStringList() << "/dev/mapper/" + m_mapper) == 0,
+                                  QStringList() << "-m" << "1" << "/dev/mapper/" + m_mapper) == 0,
                 "Failed to format filesystem");
 
   // mount and store recovery password
@@ -244,7 +244,7 @@ bool Device::encryptAndFormat()
 bool Device::format()
 {
   OPCHECK(QProcess::execute("mkfs.ext4",
-                            QStringList() << m_device) == 0,
+                            QStringList() << "-m" << "1" << m_device) == 0,
           "Failed to format filesystem");
   return true;
 }
