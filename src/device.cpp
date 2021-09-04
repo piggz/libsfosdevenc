@@ -136,7 +136,8 @@ bool Device::setEncryption(bool enc)
     }
 
   m_set_encryption_success = true;
-  m_set_encryption_encrypted = enc;
+  m_state = (enc ? StateEncrypted : StatePlain);
+
   emit encryptedChanged();
 
   return true;
@@ -145,15 +146,17 @@ bool Device::setEncryption(bool enc)
 bool Device::setInitialized()
 {
   OPCHECK(m_set_encryption_success, "Cannot set device to initialized before successful setEncrypt");
+  OPCHECK(m_state != StateReset, "Cannot set device to initialized before successful setEncrypt");
+
+  bool enc = (m_state == StateEncrypted);
 
   // update systemd configuration
-  OPCHECK(createSystemDConfig(m_set_encryption_encrypted), "Failed to setup SystemD configuration");
+  OPCHECK(createSystemDConfig(enc), "Failed to setup SystemD configuration");
 
   // record changes in configuration
   QSettings settings(CONFIG_DIR "/devices.ini", QSettings::IniFormat);
   settings.beginGroup(m_id);
-  settings.setValue("state", m_set_encryption_encrypted ? "encrypted" : "plain");
-  m_state = (m_set_encryption_encrypted ? StateEncrypted : StatePlain);
+  settings.setValue("state", enc ? "encrypted" : "plain");
 
   emit initializedChanged();
   return true;

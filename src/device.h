@@ -89,7 +89,6 @@ namespace DevEnc {
     // internal variables
     QString m_recovery_password;
     bool m_set_encryption_success{false};
-    bool m_set_encryption_encrypted{false};
   };
 
 } // namespace DevEnc
