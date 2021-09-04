@@ -375,7 +375,8 @@ bool Device::createSystemDConfig(bool enc)
     {
       fmount << "[Unit]\n"
              << "Description=" << m_name.toStdString() << "\n"
-             << "Before=late-mount.target\n\n"
+             << "Before=late-mount.target\n"
+             << "After=late-mount-pre.target\n\n"
              << "[Mount]\n"
              << "What=" << m_device.toStdString() << "\n"
              << "Where=" << m_mount.toStdString() << "\n"
@@ -423,7 +424,8 @@ bool Device::createSystemDConfig(bool enc)
   std::ofstream fservice(etc.absoluteFilePath("decrypt-" + m_mapper + ".service").toLatin1().data());
   fservice << "[Unit]\n"
            << "Description=Decrypt " << m_mapper.toStdString() << "\n"
-           << "Before=late-mount.target\n\n"
+           << "Before=late-mount.target\n"
+           << "After=late-mount-pre.target\n\n"
            << "[Service]\n"
            << "Type=oneshot\n"
            << "RemainAfterExit=yes\n"
