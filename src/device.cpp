@@ -429,7 +429,7 @@ bool Device::createSystemDConfig(bool enc)
            << "[Service]\n"
            << "Type=oneshot\n"
            << "RemainAfterExit=yes\n"
-           << "ExecStart=" << DECRYPT_CMD << " " << m_device.toStdString() << " " << m_mapper.toStdString() << "\n"
+           << "ExecStart=" << DECRYPT_CMD << " " << m_device.toStdString() << " " << m_mapper.toStdString() << " \"" << m_name.toStdString() << "\"\n"
            << "Restart=no\n\n"
            << "[Install]\n"
            << "RequiredBy=late-mount.target\n";
