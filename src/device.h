@@ -39,6 +39,9 @@ namespace DevEnc {
     Q_INVOKABLE bool setInitialized();
 
     // password
+    int freePasswordSlots();
+    int usedPasswordSlots();
+
     Q_INVOKABLE bool addPassword(Password *new_password) { return addPassword(nullptr, new_password); }
     Q_INVOKABLE bool addPassword(Password *password, Password *new_password);
 
