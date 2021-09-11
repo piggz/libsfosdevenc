@@ -104,7 +104,7 @@ bool Device::encrypted() const
   OPCHECK(crypt_init(&cd, m_device.toLatin1().data()) == 0, "crypt_init() failed");
   OPCHECK_CRYPT(crypt_load(cd, CRYPT_LUKS, NULL) == 0, "crypt_load() failed on device");
 
-  qDebug() << crypt_get_type(cd) << crypt_get_cipher(cd) << crypt_get_cipher_mode(cd) << crypt_get_iv_offset(cd) << crypt_get_volume_key_size(cd);
+  //qDebug() << crypt_get_type(cd) << crypt_get_cipher(cd) << crypt_get_cipher_mode(cd) << crypt_get_iv_offset(cd) << crypt_get_volume_key_size(cd);
 
   // cleanup
   crypt_free(cd);
