@@ -14,6 +14,7 @@ using namespace DevEnc;
   std::cerr << "DevEnc::DevKey:" << __LINE__ << ": " << msg << ". Device: " << m_device.toStdString() << "\n"; \
   return res; }
 
+
 bool Device::addPassword(Password *passwordObj, Password *new_passwordObj)
 {
   QByteArray password; if (passwordObj) password = passwordObj->get();
@@ -41,6 +42,71 @@ bool Device::addPassword(Password *passwordObj, Password *new_passwordObj)
   return true;
 }
 
+
+bool Device::removePassword(Password *passwordObj, Password *toremove_passwordObj)
+{
+  QByteArray password; if (passwordObj) password = passwordObj->get();
+  QByteArray toremove_password; if (toremove_passwordObj) toremove_password = toremove_passwordObj->get();
+
+  OPCHECK(m_state == StateEncrypted, "Cannot remove password from non-encrypted device", false);
+  OPCHECK(!toremove_password.isEmpty(), "Cannot remove empty password", false);
+  OPCHECK(!password.isEmpty(), "Cannot remove password without providing another one", false);
+
+  struct crypt_device *cd;
+
+  OPCHECK(crypt_init(&cd, m_device.toLatin1().data()) == 0, "crypt_init() failed", false);
+  OPCHECK_CRYPT(crypt_load(cd, CRYPT_LUKS, NULL) == 0, "Failed to load LUKS header", false);
+
+  int control_slot = crypt_activate_by_passphrase(cd,
+                                                 NULL,
+                                                 CRYPT_ANY_SLOT,
+                                                 password.data(),
+                                                 password.size(),
+                                                 0);
+  OPCHECK_CRYPT( control_slot >= 0,
+                "Failed to remove password: remaining password does not unlock", false);
+
+  int toremove_slot = crypt_activate_by_passphrase(cd,
+                                                 NULL,
+                                                 CRYPT_ANY_SLOT,
+                                                 toremove_password.data(),
+                                                 toremove_password.size(),
+                                                 0);
+  OPCHECK_CRYPT( toremove_slot >= 0,
+                "Failed to remove password: password for removal does not unlock", false);
+
+  OPCHECK_CRYPT( toremove_slot != control_slot,
+                 "Failed to remove password: removed and remaining password are the same", false);
+
+  OPCHECK_CRYPT( crypt_keyslot_destroy(cd, toremove_slot) == 0,
+                 "Failed to remove password: crypt_keyslot_destroy failed", false);
+
+  crypt_free(cd);
+  return true;
+}
+
+
+bool Device::testPassword(Password *passwordObj)
+{
+  QByteArray password; if (passwordObj) password = passwordObj->get();
+
+  OPCHECK(m_state == StateEncrypted, "Cannot remove password from non-encrypted device", false);
+  OPCHECK(!password.isEmpty(), "Cannot test empty password", false);
+
+  struct crypt_device *cd;
+
+  OPCHECK(crypt_init(&cd, m_device.toLatin1().data()) == 0, "crypt_init() failed", false);
+  OPCHECK_CRYPT(crypt_load(cd, CRYPT_LUKS, NULL) == 0, "Failed to load LUKS header", false);
+
+  int control_slot = crypt_activate_by_passphrase(cd,
+                                                 NULL,
+                                                 CRYPT_ANY_SLOT,
+                                                 password.data(),
+                                                 password.size(),
+                                                 0);
+  crypt_free(cd);
+  return control_slot >= 0;
+}
 
 int Device::freePasswordSlots()
 {
