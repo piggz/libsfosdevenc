@@ -1,4 +1,5 @@
 #include "devicelist.h"
+#include "constants.h"
 
 #include <QSettings>
 
@@ -10,8 +11,20 @@ DeviceList* DeviceList::s_instance = nullptr;
 
 DeviceList::DeviceList(QObject *parent) : QObject(parent)
 {
+  // merge distribution provided settings with the settings
+  // on this device. separate settings files are required to avoid
+  // overwriting configuration during updates as could happen when
+  // devices.ini is distributed through droid-config
+  {
+    QSettings local_config(INI_SETTINGS, QSettings::IniFormat);
+    QSettings default_config(INI_DISTRIBUTION_DEFAULTS, QSettings::IniFormat);
+    for (QString key: default_config.allKeys())
+      if (!local_config.contains(key))
+        local_config.setValue(key, default_config.value(key));
+  }
+
   // Load available devices
-  QSettings device_config(CONFIG_DIR "/devices.ini", QSettings::IniFormat);
+  QSettings device_config(INI_SETTINGS, QSettings::IniFormat);
   for (QString group: device_config.childGroups())
     {
       device_config.beginGroup(group);

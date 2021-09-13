@@ -1,4 +1,5 @@
 #include "device.h"
+#include "constants.h"
 
 #include <QDir>
 #include <QDebug>
@@ -154,7 +155,7 @@ bool Device::setInitialized()
   OPCHECK(createSystemDConfig(enc), "Failed to setup SystemD configuration");
 
   // record changes in configuration
-  QSettings settings(CONFIG_DIR "/devices.ini", QSettings::IniFormat);
+  QSettings settings(INI_SETTINGS, QSettings::IniFormat);
   settings.beginGroup(m_id);
   settings.setValue("state", enc ? "encrypted" : "plain");
 
