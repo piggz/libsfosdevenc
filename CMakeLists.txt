@@ -18,6 +18,8 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CONFIG_DIR "/etc/sailfish-device-encryption-community" CACHE STRING "Full path for system configuration directory")
 set(RECOVERY_PASSWORD_FILE ".sailfish-device-encryption-community/recovery-password" CACHE STRING "Relative path for recovery password")
 set(DECRYPT_CMD "/usr/libexec/sailfish-device-encryption-community/decrypt" CACHE STRING "Device decryption command")
+set(HWCRYPT_CMD "/usr/libexec/sailfish-device-encryption-community/hwcrypt-key" CACHE STRING "HWCrypt key command")
+set(HWCRYPT_GEN_CMD "/usr/libexec/sailfish-device-encryption-community/hwcrypt-key-generate" CACHE STRING "HWCrypt key generation command")
 
 # sources
 
@@ -35,6 +37,8 @@ add_compile_options(
     -DCONFIG_DIR="${CONFIG_DIR}"
     -DRECOVERY_PASSWORD_FILE="${RECOVERY_PASSWORD_FILE}"
     -DDECRYPT_CMD="${DECRYPT_CMD}"
+    -DHWCRYPT_CMD="${HWCRYPT_CMD}"
+    -DHWCRYPT_GEN_CMD="${HWCRYPT_GEN_CMD}"
 )
 
 add_library(sfosdevenc SHARED ${CXX_SRC} ${CXX_HEADERS})

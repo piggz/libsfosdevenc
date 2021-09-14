@@ -1,5 +1,6 @@
 #include "passwordmaker.h"
 
+#include "passwordhwcrypt.h"
 #include "passwordplain.h"
 
 using namespace DevEnc;
@@ -18,23 +19,26 @@ PasswordMaker* PasswordMaker::instance()
 
 QStringList PasswordMaker::types() const
 {
-  return { PasswordPlain::type() };
+  return { PasswordHWCrypt::type(), PasswordPlain::type() };
 }
 
 QString PasswordMaker::description(QString type) const
 {
+  if (type == PasswordHWCrypt::type()) return PasswordHWCrypt::description();
   if (type == PasswordPlain::type()) return PasswordPlain::description();
   return "";
 }
 
 QString PasswordMaker::descriptionLong(QString type) const
 {
+  if (type == PasswordHWCrypt::type()) return PasswordHWCrypt::descriptionLong();
   if (type == PasswordPlain::type()) return PasswordPlain::descriptionLong();
   return "";
 }
 
 Password* PasswordMaker::newPassword(QString type)
 {
+  if (type == PasswordHWCrypt::type()) return new PasswordHWCrypt();
   if (type == PasswordPlain::type()) return new PasswordPlain();
   return nullptr;
 }

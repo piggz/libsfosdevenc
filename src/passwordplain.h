@@ -10,7 +10,7 @@ namespace DevEnc {
   public:
     explicit PasswordPlain(QObject *parent = nullptr);
 
-    virtual QByteArray get();
+    virtual QByteArray get(QString /*mapper*/);
 
   public: // static
     static QString type();

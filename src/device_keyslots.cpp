@@ -17,13 +17,14 @@ using namespace DevEnc;
 
 bool Device::addPassword(Password *passwordObj, Password *new_passwordObj)
 {
-  QByteArray password; if (passwordObj) password = passwordObj->get();
-  QByteArray new_password; if (new_passwordObj) new_password = new_passwordObj->get();
+  QByteArray password; if (passwordObj) password = passwordObj->get(m_mapper);
+  QByteArray new_password; if (new_passwordObj) new_password = new_passwordObj->get(m_mapper);
 
   OPCHECK(m_state == StateEncrypted, "Cannot add password to non-encrypted device", false);
   OPCHECK(!new_password.isEmpty(), "Cannot add empty password", false);
   if (password.isEmpty()) password = m_recovery_password.toLatin1();
   OPCHECK(!password.isEmpty(), "Cannot add new password without providing another one", false);
+  OPCHECK(password!=new_password, "Cannot add the same password as the control one", false);
 
   struct crypt_device *cd;
 
@@ -45,8 +46,8 @@ bool Device::addPassword(Password *passwordObj, Password *new_passwordObj)
 
 bool Device::removePassword(Password *passwordObj, Password *toremove_passwordObj)
 {
-  QByteArray password; if (passwordObj) password = passwordObj->get();
-  QByteArray toremove_password; if (toremove_passwordObj) toremove_password = toremove_passwordObj->get();
+  QByteArray password; if (passwordObj) password = passwordObj->get(m_mapper);
+  QByteArray toremove_password; if (toremove_passwordObj) toremove_password = toremove_passwordObj->get(m_mapper);
 
   OPCHECK(m_state == StateEncrypted, "Cannot remove password from non-encrypted device", false);
   OPCHECK(!toremove_password.isEmpty(), "Cannot remove empty password", false);
@@ -88,9 +89,9 @@ bool Device::removePassword(Password *passwordObj, Password *toremove_passwordOb
 
 bool Device::testPassword(Password *passwordObj)
 {
-  QByteArray password; if (passwordObj) password = passwordObj->get();
+  QByteArray password; if (passwordObj) password = passwordObj->get(m_mapper);
 
-  OPCHECK(m_state == StateEncrypted, "Cannot remove password from non-encrypted device", false);
+  OPCHECK(m_state == StateEncrypted, "Cannot test password on non-encrypted device", false);
   OPCHECK(!password.isEmpty(), "Cannot test empty password", false);
 
   struct crypt_device *cd;

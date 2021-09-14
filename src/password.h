@@ -19,7 +19,7 @@ namespace DevEnc {
     void setPassword(QString p);
 
     // override in implementations
-    virtual QByteArray get() { return QByteArray(); }
+    virtual QByteArray get(QString /*mapper*/) { return QByteArray(); }
 
   signals:
     void passwordChanged();
