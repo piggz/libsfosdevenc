@@ -13,6 +13,7 @@ namespace DevEnc {
     virtual QByteArray get(QString /*mapper*/);
 
   public: // static
+    static bool available();
     static QString type();
     static QString description();
     static QString descriptionLong();

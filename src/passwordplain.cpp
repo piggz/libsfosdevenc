@@ -6,6 +6,11 @@ PasswordPlain::PasswordPlain(QObject *parent) : DevEnc::Password(parent)
 {
 }
 
+bool PasswordPlain::available()
+{
+  return true;
+}
+
 QByteArray PasswordPlain::get(QString /*mapper*/)
 {
   return m_password.toLatin1();

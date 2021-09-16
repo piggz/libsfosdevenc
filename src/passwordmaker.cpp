@@ -19,7 +19,10 @@ PasswordMaker* PasswordMaker::instance()
 
 QStringList PasswordMaker::types() const
 {
-  return { PasswordHWCrypt::type(), PasswordPlain::type() };
+  QStringList t;
+  if (PasswordHWCrypt::available()) t << PasswordHWCrypt::type();
+  if (PasswordPlain::available()) t << PasswordPlain::type();
+  return t;
 }
 
 QString PasswordMaker::description(QString type) const

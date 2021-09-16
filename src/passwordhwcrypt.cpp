@@ -1,5 +1,6 @@
 #include "passwordhwcrypt.h"
 
+#include <QFileInfo>
 #include <QProcess>
 #include <QDebug>
 
@@ -13,12 +14,17 @@ PasswordHWCrypt::PasswordHWCrypt(QObject *parent) : DevEnc::Password(parent)
 {
 }
 
+bool PasswordHWCrypt::available()
+{
+  return QFileInfo::exists(HWCRYPT_CMD);
+}
+
 QByteArray PasswordHWCrypt::get(QString mapper)
 {
   // phase 1: generate hw key and salt if needed. if they are available already, it becomes noop
   {
     QProcess proc;
-    proc.start(HWCRYPT_GEN_CMD,
+    proc.start(HWCRYPT_KEY_GEN_CMD,
                QStringList() << mapper << DELAY_BETWEEN_TRIES);
 
     // exit on error
@@ -35,7 +41,7 @@ QByteArray PasswordHWCrypt::get(QString mapper)
 
   // phase 2: pipe password through hwcrypt
   QProcess proc;
-  proc.start(HWCRYPT_CMD,
+  proc.start(HWCRYPT_KEY_CMD,
              QStringList() << mapper);
 
   QByteArray w = m_password.toLatin1();
