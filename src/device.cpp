@@ -151,9 +151,6 @@ bool Device::setInitialized()
 
   bool enc = (m_state == StateEncrypted);
 
-  // update systemd configuration
-  OPCHECK(createSystemDConfig(enc), "Failed to setup SystemD configuration");
-
   // record changes in configuration
   QSettings settings(INI_SETTINGS, QSettings::IniFormat);
   settings.beginGroup(m_id);
@@ -187,6 +184,132 @@ bool Device::removeRecoveryPasswordCopy()
   return true;
 }
 
+
+// SystemD units
+bool Device::createSystemDConfig(const QString &prefix)
+{
+  OPCHECK(initialized(), "Cannot create systemd units for uninitialized device");
+  OPCHECK(deviceAvailable(), "Device is not available");
+
+  QDir etc(prefix);
+  bool enc = (m_state == StateEncrypted);
+
+  QString mount = m_mount.mid(1);
+
+  // cleanup and remove possibly present units
+  QStringList conffilelist;
+  conffilelist << mount + ".mount"
+               << "late-mount.target.requires/" + mount + ".mount"
+               << "decrypt-" + m_mapper + "service"
+               << "late-mount.target.requires/decrypt-" + m_mapper + ".service"
+               << "dev-mapper-" + m_mapper + ".device"
+               << "mounttmp-" + mount + ".service"
+               << "late-mount.target.requires/mounttmp-" + mount + ".service";
+  for (const QString &i: conffilelist)
+    etc.remove(i);
+
+  // new units
+
+  if (!enc && m_type == TypeFile)
+    return true; // nothing to mount in this case
+
+  OPCHECK(etc.mkpath("late-mount.target.requires"),
+          "Failed to create missing systemd directory");
+
+  // required in all remaining cases
+  std::ofstream fmount(etc.absoluteFilePath(mount + ".mount").toLatin1().data());
+
+  if (!enc && m_type == TypeDevice)
+    {
+      fmount << "[Unit]\n"
+             << "Description=" << m_name.toStdString() << "\n"
+             << "Before=late-mount.target\n"
+             << "After=late-mount-pre.target\n\n"
+             << "[Mount]\n"
+             << "What=" << m_device.toStdString() << "\n"
+             << "Where=" << m_mount.toStdString() << "\n"
+             << "Options=defaults,noatime\n\n"
+             << "[Install]\n"
+             << "RequiredBy=late-mount.target\n";
+      OPCHECK(fmount, "Failed to write mount unit");
+
+      OPCHECK(QFile::link("../" + mount + ".mount",
+                          etc.absoluteFilePath("late-mount.target.requires/" + mount + ".mount")),
+              "Failed to enable SystemD mount unit");
+
+      return true;
+    }
+
+  OPCHECK(enc, "Internal error, should never happen");
+
+  // mount unit for encrypted case
+  fmount << "[Unit]\n"
+         << "Description=" << m_name.toStdString() << "\n"
+         << "After=decrypt-" << m_mapper.toStdString() << ".service\n"
+         << "Before=late-mount.target\n\n"
+         << "[Mount]\n"
+         << "What=/dev/mapper/" << m_mapper.toStdString() << "\n"
+         << "Where=" << m_mount.toStdString() << "\n"
+         << "Options=defaults,noatime\n\n"
+         << "[Install]\n"
+         << "RequiredBy=late-mount.target\n";
+  OPCHECK(fmount, "Failed to write mount unit");
+
+  OPCHECK(QFile::link("../" + mount + ".mount",
+                      etc.absoluteFilePath("late-mount.target.requires/" + mount + ".mount")),
+          "Failed to enable SystemD mount unit");
+
+  // device unit
+  std::ofstream fdevice(etc.absoluteFilePath("dev-mapper-" + m_mapper + ".device").toLatin1().data());
+  fdevice << "[Unit]\n"
+          << "Description=Device " << m_mapper.toStdString() << "\n"
+          << "JobTimeoutSec=0\n";
+  OPCHECK(fdevice, "Failed to write device unit");
+
+  // decryption service unit
+  std::ofstream fservice(etc.absoluteFilePath("decrypt-" + m_mapper + ".service").toLatin1().data());
+  fservice << "[Unit]\n"
+           << "Description=Decrypt " << m_mapper.toStdString() << "\n"
+           << "Before=late-mount.target\n"
+           << "After=late-mount-pre.target\n"
+           << "ConditionPathExists=!/run/systemd/boot-status/ACT_DEAD\n"
+           << "ConditionPathExists=!/run/systemd/boot-status/TEST\n\n"
+           << "[Service]\n"
+           << "Type=oneshot\n"
+           << "RemainAfterExit=yes\n"
+           << "ExecStart=" << DECRYPT_CMD << " " << m_device.toStdString() << " " << m_mapper.toStdString() << " \"" << m_name.toStdString() << "\"\n"
+           << "Restart=no\n\n"
+           << "[Install]\n"
+           << "RequiredBy=late-mount.target\n";
+  OPCHECK(fservice, "Failed to write decryption service unit");
+
+  OPCHECK(QFile::link("../decrypt-" + m_mapper + ".service",
+                      etc.absoluteFilePath("late-mount.target.requires/decrypt-" + m_mapper + ".service")),
+          "Failed to enable SystemD decryption service unit");
+
+  // mount service unit used in ACT_DEAD mode
+  std::ofstream fmnttmp(etc.absoluteFilePath("mounttmp-" + mount + ".service").toLatin1().data());
+  fmnttmp << "[Unit]\n"
+          << "Description=Mount " << m_mount.toStdString() << " replacement\n"
+          << "Before=late-mount.target\n"
+          << "After=late-mount-pre.target\n"
+          << "ConditionPathExists=|/run/systemd/boot-status/ACT_DEAD\n"
+          << "ConditionPathExists=|/run/systemd/boot-status/TEST\n\n"
+          << "[Service]\n"
+          << "Type=oneshot\n"
+          << "RemainAfterExit=yes\n"
+          << "ExecStart=" << MOUNTTMP_CMD << " " << m_mount.toStdString() << "\n\n"
+          << "Restart=no\n\n"
+          << "[Install]\n"
+          << "RequiredBy=late-mount.target\n";
+  OPCHECK(fmnttmp, "Failed to write ACT_DEAD mount service unit");
+
+  OPCHECK(QFile::link("../mounttmp-" + mount + ".service",
+                      etc.absoluteFilePath("late-mount.target.requires/mounttmp-" + mount + ".service")),
+          "Failed to enable SystemD ACT_DEAD mount service unit");
+
+  return true;
+}
 
 ////////////////////////////////////////////
 /// Private methods
@@ -341,128 +464,6 @@ bool Device::deleteFile()
       QDir dir;
       OPCHECK(dir.remove(fi.absoluteFilePath()), "Failed to remove file");
     }
-
-  return true;
-}
-
-// SystemD units
-bool Device::createSystemDConfig(bool enc)
-{
-  QDir etc("/etc/systemd/system");
-
-  QString mount = m_mount.mid(1);
-
-  // cleanup and remove possibly present units
-  QStringList conffilelist;
-  conffilelist << mount + ".mount"
-               << "late-mount.target.requires/" + mount + ".mount"
-               << "decrypt-" + m_mapper + "service"
-               << "late-mount.target.requires/decrypt-" + m_mapper + ".service"
-               << "dev-mapper-" + m_mapper + ".device"
-               << "mounttmp-" + mount + ".service"
-               << "late-mount.target.requires/mounttmp-" + mount + ".service";
-  for (const QString &i: conffilelist)
-    etc.remove(i);
-
-  // new units
-
-  if (!enc && m_type == TypeFile)
-    return true; // nothing to mount in this case
-
-  OPCHECK(etc.mkpath("late-mount.target.requires"),
-          "Failed to create missing systemd directory");
-
-  // required in all remaining cases
-  std::ofstream fmount(etc.absoluteFilePath(mount + ".mount").toLatin1().data());
-
-  if (!enc && m_type == TypeDevice)
-    {
-      fmount << "[Unit]\n"
-             << "Description=" << m_name.toStdString() << "\n"
-             << "Before=late-mount.target\n"
-             << "After=late-mount-pre.target\n\n"
-             << "[Mount]\n"
-             << "What=" << m_device.toStdString() << "\n"
-             << "Where=" << m_mount.toStdString() << "\n"
-             << "Options=defaults,noatime\n\n"
-             << "[Install]\n"
-             << "RequiredBy=late-mount.target\n";
-      OPCHECK(fmount, "Failed to write mount unit");
-
-      OPCHECK(QFile::link("../" + mount + ".mount",
-                          etc.absoluteFilePath("late-mount.target.requires/" + mount + ".mount")),
-              "Failed to enable SystemD mount unit");
-
-      return true;
-    }
-
-  OPCHECK(enc, "Internal error, should never happen");
-
-  // mount unit for encrypted case
-  fmount << "[Unit]\n"
-         << "Description=" << m_name.toStdString() << "\n"
-         << "After=decrypt-" << m_mapper.toStdString() << ".service\n"
-         << "Before=late-mount.target\n\n"
-         << "[Mount]\n"
-         << "What=/dev/mapper/" << m_mapper.toStdString() << "\n"
-         << "Where=" << m_mount.toStdString() << "\n"
-         << "Options=defaults,noatime\n\n"
-         << "[Install]\n"
-         << "RequiredBy=late-mount.target\n";
-  OPCHECK(fmount, "Failed to write mount unit");
-
-  OPCHECK(QFile::link("../" + mount + ".mount",
-                      etc.absoluteFilePath("late-mount.target.requires/" + mount + ".mount")),
-          "Failed to enable SystemD mount unit");
-
-  // device unit
-  std::ofstream fdevice(etc.absoluteFilePath("dev-mapper-" + m_mapper + ".device").toLatin1().data());
-  fdevice << "[Unit]\n"
-          << "Description=Device " << m_mapper.toStdString() << "\n"
-          << "JobTimeoutSec=0\n";
-  OPCHECK(fdevice, "Failed to write device unit");
-
-  // decryption service unit
-  std::ofstream fservice(etc.absoluteFilePath("decrypt-" + m_mapper + ".service").toLatin1().data());
-  fservice << "[Unit]\n"
-           << "Description=Decrypt " << m_mapper.toStdString() << "\n"
-           << "Before=late-mount.target\n"
-           << "After=late-mount-pre.target\n"
-           << "ConditionPathExists=!/run/systemd/boot-status/ACT_DEAD\n"
-           << "ConditionPathExists=!/run/systemd/boot-status/TEST\n\n"
-           << "[Service]\n"
-           << "Type=oneshot\n"
-           << "RemainAfterExit=yes\n"
-           << "ExecStart=" << DECRYPT_CMD << " " << m_device.toStdString() << " " << m_mapper.toStdString() << " \"" << m_name.toStdString() << "\"\n"
-           << "Restart=no\n\n"
-           << "[Install]\n"
-           << "RequiredBy=late-mount.target\n";
-  OPCHECK(fservice, "Failed to write decryption service unit");
-
-  OPCHECK(QFile::link("../decrypt-" + m_mapper + ".service",
-                      etc.absoluteFilePath("late-mount.target.requires/decrypt-" + m_mapper + ".service")),
-          "Failed to enable SystemD decryption service unit");
-
-  // mount service unit used in ACT_DEAD mode
-  std::ofstream fmnttmp(etc.absoluteFilePath("mounttmp-" + mount + ".service").toLatin1().data());
-  fmnttmp << "[Unit]\n"
-          << "Description=Mount " << m_mount.toStdString() << " replacement\n"
-          << "Before=late-mount.target\n"
-          << "After=late-mount-pre.target\n"
-          << "ConditionPathExists=|/run/systemd/boot-status/ACT_DEAD\n"
-          << "ConditionPathExists=|/run/systemd/boot-status/TEST\n\n"
-          << "[Service]\n"
-          << "Type=oneshot\n"
-          << "RemainAfterExit=yes\n"
-          << "ExecStart=" << MOUNTTMP_CMD << " " << m_mount.toStdString() << "\n\n"
-          << "Restart=no\n\n"
-          << "[Install]\n"
-          << "RequiredBy=late-mount.target\n";
-  OPCHECK(fmnttmp, "Failed to write ACT_DEAD mount service unit");
-
-  OPCHECK(QFile::link("../mounttmp-" + mount + ".service",
-                      etc.absoluteFilePath("late-mount.target.requires/mounttmp-" + mount + ".service")),
-          "Failed to enable SystemD ACT_DEAD mount service unit");
 
   return true;
 }

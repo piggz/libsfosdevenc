@@ -49,8 +49,8 @@ namespace DevEnc {
 
     bool testPassword(Password *passwordObj);
 
-    bool wantEncrypted() const { return m_state == StateEncrypted; }
-    bool wantPlain() const { return m_state == StatePlain; }
+    // used by generator to create SystemD units
+    bool createSystemDConfig(const QString &prefix);
 
   signals:
     void deviceAvailableChanged();
@@ -68,8 +68,6 @@ namespace DevEnc {
 
     bool encryptAndFormat();
     bool format();
-
-    bool createSystemDConfig(bool enc);
 
   private:
     enum State {

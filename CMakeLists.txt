@@ -76,13 +76,3 @@ install(
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/devenc"
     COMPONENT development
 )
-
-# install(
-#     FILES
-#         platform/qt/include/QMapbox
-#         platform/qt/include/QMapboxGL
-#         platform/qt/include/qmapbox.hpp
-#         platform/qt/include/qmapboxgl.hpp
-#     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/qt5"
-#     COMPONENT development
-# )
