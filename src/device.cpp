@@ -33,6 +33,7 @@ Device::Device(QObject *parent) : QObject(parent)
 
 Device::Device(QSettings &settings, QObject *parent) : QObject(parent)
 {
+  qDebug() << Q_FUNC_INFO;
   m_id = settings.group();
 
   m_name = settings.value("name").toString();
@@ -78,10 +79,13 @@ Device::Device(QSettings &settings, QObject *parent) : QObject(parent)
   else if (s == "plain") m_state = StatePlain;
   else
     throw std::runtime_error(m_id.toStdString() + ": Unknown state of the device");
+
+  qDebug() << "...created";
 }
 
 bool Device::deviceAvailable() const
 {
+  qDebug() << Q_FUNC_INFO;
   QFileInfo fi(m_device);
 
   if (m_type==TypeDevice)
@@ -114,6 +118,7 @@ bool Device::encrypted() const
 
 bool Device::setEncryption(bool enc)
 {
+  qDebug() << Q_FUNC_INFO;
   m_set_encryption_success = false;
 
   OPCHECK(!initialized(), "Set encryption can be called on noninitialized device only");
@@ -146,6 +151,7 @@ bool Device::setEncryption(bool enc)
 
 bool Device::setInitialized()
 {
+  qDebug() << Q_FUNC_INFO;
   OPCHECK(m_set_encryption_success, "Cannot set device to initialized before successful setEncrypt");
   OPCHECK(m_state != StateReset, "Cannot set device to initialized before successful setEncrypt");
 
@@ -162,6 +168,7 @@ bool Device::setInitialized()
 
 QString Device::getRecoveryPassword() const
 {
+  qDebug() << Q_FUNC_INFO;
   if (!m_recovery_password.isEmpty()) return m_recovery_password;
 
   // load from stored copy and show that. but never load it to
@@ -188,6 +195,7 @@ bool Device::removeRecoveryPasswordCopy()
 // SystemD units
 bool Device::createSystemDConfig(const QString &prefix)
 {
+  qDebug() << Q_FUNC_INFO;
   OPCHECK(initialized(), "Cannot create systemd units for uninitialized device");
   OPCHECK(deviceAvailable(), "Device is not available");
 
@@ -316,6 +324,7 @@ bool Device::createSystemDConfig(const QString &prefix)
 
 bool Device::encryptAndFormat()
 {
+  qDebug() << Q_FUNC_INFO;
   // initialize encryption
   struct crypt_device *cd;
 
@@ -394,6 +403,7 @@ void Device::createRecoveryPassword()
 
 bool Device::writeRecoveryPasswordCopy()
 {
+  qDebug() << Q_FUNC_INFO;
   // mount filesystem
   QTemporaryDir tmpDir;
   OPCHECK(tmpDir.isValid(), "Failed to create temporary directory");
@@ -437,6 +447,7 @@ bool Device::writeRecoveryPasswordCopy()
 // File operations
 bool Device::createFile()
 {
+  qDebug() << Q_FUNC_INFO;
   QFileInfo fi(m_device);
 
   if (fi.exists())
@@ -457,6 +468,7 @@ bool Device::createFile()
 
 bool Device::deleteFile()
 {
+  qDebug() << Q_FUNC_INFO;
   QFileInfo fi(m_device);
 
   if (fi.exists())

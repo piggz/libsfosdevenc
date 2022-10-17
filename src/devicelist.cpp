@@ -16,6 +16,7 @@ DeviceList::DeviceList(QObject *parent) : QObject(parent)
   // overwriting configuration during updates as could happen when
   // devices.ini is distributed through droid-config
   {
+    qDebug() << Q_FUNC_INFO;
     QSettings local_config(INI_SETTINGS, QSettings::IniFormat);
     QSettings default_config(INI_DISTRIBUTION_DEFAULTS, QSettings::IniFormat);
     for (QString key: default_config.allKeys())
@@ -36,15 +37,19 @@ DeviceList::DeviceList(QObject *parent) : QObject(parent)
 
 DeviceList* DeviceList::instance()
 {
+  qDebug() << Q_FUNC_INFO;
   if (!s_instance) s_instance = new DeviceList();
   return s_instance;
 }
 
 bool DeviceList::initNeeded() const
 {
+  qDebug() << Q_FUNC_INFO;
   for (auto p: m_devices)
     if (!p->initialized())
       return true;
+
+  qDebug() << "Init not needed";
   return false;
 }
 
